@@ -1,6 +1,8 @@
 package com.company;
 
 import com.company.Exceptions.IdValueDuplicationException;
+import com.company.Exceptions.TableReferenceNameNotExistException;
+import com.company.Services.DbService;
 import com.company.Services.TableService;
 import org.json.JSONException;
 
@@ -11,18 +13,13 @@ import java.util.List;
 
 public class Main {
 
-    public static void main(String[] args) throws IdValueDuplicationException, ParseException, ClassCastException, JSONException {
+    public static void main(String[] args) throws IdValueDuplicationException, ParseException, ClassCastException, JSONException, TableReferenceNameNotExistException {
         List<Object> values=new ArrayList<>();
         values.add(5);
-
-
-        TableService ts=new TableService();
-
-
-        System.out.println(ts.createTable( "xxxx"));
-        ts.insertRow(values);
-
-        ts.SaveTabel();
-        System.out.println(ts.table);
+        values.add(8);
+        DbService db=new DbService();
+        db.buildDataBaseTable("person");
+        db.buildDataBaseTable("location");
+        db.buildDataBaseTable("job");
     }
 }

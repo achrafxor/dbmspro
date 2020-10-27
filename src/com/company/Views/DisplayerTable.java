@@ -3,6 +3,7 @@ package com.company.Views;
 
 import com.company.Exceptions.IdValueDuplicationException;
 
+import java.sql.SQLOutput;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -83,6 +84,13 @@ public class DisplayerTable {
         } while (!valid);
         return primaryKey;
     }
+    public String defineTableReferenceName(String key){
+        Scanner sc=new Scanner(System.in);
+        String tabelReferenceName;
+        System.out.println("define the table reference name");
+        tabelReferenceName=sc.nextLine();
+        return tabelReferenceName;
+    }
 
     public List defineForeignKeysView(List<String> names) {
         List<String> foreignKeys = new ArrayList<>();
@@ -106,6 +114,7 @@ public class DisplayerTable {
             } else
                 System.out.println(foreignKey + " field does not exist");
         } while (!valid || choice == 'y');
+
         return foreignKeys;
     }
 

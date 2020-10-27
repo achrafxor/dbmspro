@@ -1,20 +1,25 @@
 package com.company.Services;
 
 import com.company.Entities.Attribute;
+import com.company.Entities.Db;
 import com.company.Entities.Row;
 import com.company.Entities.Table;
 import com.company.Exceptions.IdValueDuplicationException;
+import com.company.Exceptions.TableReferenceNameNotExistException;
 import com.company.Views.DisplayerTable;
-import netscape.javascript.JSObject;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class TableService implements InterfaceTable {
+    Db db=new Db("db");
     DisplayerTable d=new DisplayerTable();
     public Table table;
     @Override
@@ -24,13 +29,14 @@ public class TableService implements InterfaceTable {
 
     @Override
 
-    public Table createTable(String tableName) {
+    public Table createTable(String tableName) throws TableReferenceNameNotExistException {
         this.table=new Table(tableName);
         createTableAttributes();
         return table;
     }
 
-        public void createTableAttributes()  {
+        public void createTableAttributes() throws TableReferenceNameNotExistException {
+        String tableRefernceName;
             List<Attribute> tableAttributes=new ArrayList<>();
             List<String> names,types,foreignKeys;
             String primaryKey="";
@@ -40,14 +46,31 @@ public class TableService implements InterfaceTable {
             types=d.createTableAttributesTypeView(names);
             primaryKey=d.definePrimaryKeyView(names);
             foreignKeys=d.defineForeignKeysView(names);
+            System.out.println(foreignKeys);
             for(int i=0;i<names.size();i++){
-                if(names.get(i).equals(primaryKey)&&foreignKeys.contains(names.get(i)))
-                    tableAttributes.add(new Attribute(names.get(i),types.get(i),true,true));
-                else if(names.get(i).equals(primaryKey))
+                if(names.get(i).equals(primaryKey)&&foreignKeys.contains(names.get(i))){
+
+                    tableRefernceName=d.defineTableReferenceName(names.get(i));
+                   List<String> listOfTableNames= db.getTables().stream().map(x->x.getTableName()).collect(Collectors.toList());
+                   if(!listOfTableNames.contains(equals(tableRefernceName)) || listOfTableNames.size()==0){
+                       throw new TableReferenceNameNotExistException();
+                   }else{
+                       tableAttributes.add(new Attribute(names.get(i),types.get(i),true,true,tableRefernceName));
+                   }
+
+                } else if(names.get(i).equals(primaryKey))
                     tableAttributes.add(new Attribute(names.get(i),types.get(i),true,false));
-                else if(foreignKeys.contains(names.get(i)))
-                    tableAttributes.add(new Attribute(names.get(i),types.get(i),false,true));
-                else
+                else if(foreignKeys.contains(names.get(i))){
+                    tableRefernceName=d.defineTableReferenceName(names.get(i));
+                    System.out.println("table reference name is " +tableRefernceName);
+                    List<String> listOfTableNames= db.getTables().stream().map(x->x.getTableName()).collect(Collectors.toList());
+                    if(!listOfTableNames.contains(equals(tableRefernceName)) || listOfTableNames.size()==0){
+                        throw new TableReferenceNameNotExistException();
+                    }else{
+                        tableAttributes.add(new Attribute(names.get(i),types.get(i),false,true,tableRefernceName));
+                    }
+
+                } else
                     tableAttributes.add(new Attribute(names.get(i),types.get(i),false,false));
 
 
@@ -109,7 +132,9 @@ public class TableService implements InterfaceTable {
         return name;
     }
     public void SaveTabel() throws JSONException {
+        String foreignKeyReference;
         JSONObject tableDetails = new JSONObject();
+        JSONArray jsonArray=new JSONArray();
         Set<String> keys= table.getRows().get(0).getRow().keySet();
         List<String> keys2=new ArrayList<>(keys);
         for (Row row:table.getRows()
@@ -119,6 +144,16 @@ public class TableService implements InterfaceTable {
             }
         }
         System.out.println(tableDetails);
+        try{
+            FileWriter filewriter=new FileWriter("C:\\Users\\asaoud\\Desktop\\javaworkspace\\file.json");
+            filewriter.write(tableDetails.toString());
+            filewriter.flush();
+            filewriter.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
 
     }
 
