@@ -22,21 +22,22 @@ public class TableService implements InterfaceTable {
     Db db=new Db("db");
     DisplayerTable d=new DisplayerTable();
     public Table table;
-    @Override
-    public void insertIntoTable(List<Object> values) {
-
-    }
 
     @Override
 
-    public Table createTable(String tableName) throws TableReferenceNameNotExistException {
+    public Table createTable(String tableName,Db db) throws TableReferenceNameNotExistException {
         this.table=new Table(tableName);
-        createTableAttributes();
+        createTableAttributes(db);
+        List<Table> tables=new ArrayList<>();
+        tables=db.getTables();
+        tables.add(table);
+        db.setTables(tables);
         return table;
     }
-
-        public void createTableAttributes() throws TableReferenceNameNotExistException {
-        String tableRefernceName;
+        //create the table attributes
+        public void createTableAttributes(Db db) throws TableReferenceNameNotExistException {
+            List<String> listOfTableNames=new ArrayList<>();
+            String tableRefernceName;
             List<Attribute> tableAttributes=new ArrayList<>();
             List<String> names,types,foreignKeys;
             String primaryKey="";
@@ -47,24 +48,40 @@ public class TableService implements InterfaceTable {
             primaryKey=d.definePrimaryKeyView(names);
             foreignKeys=d.defineForeignKeysView(names);
             System.out.println(foreignKeys);
-            for(int i=0;i<names.size();i++){
-                if(names.get(i).equals(primaryKey)&&foreignKeys.contains(names.get(i))){
+            if(db.getTables().size()!=0){
+                listOfTableNames= db.getTables().stream().map(x->x.getTableName()).collect(Collectors.toList());
+                System.out.println("list of table names "+listOfTableNames);
+                System.out.println("size is not zeron");
+            }else{
+                System.out.println("size of db is 0");
+            }
 
+            for(int i=0;i<names.size();i++){
+
+                if(names.get(i).equals(primaryKey)&&foreignKeys.contains(names.get(i))){
+                    //if the attribuTe is a PK and FK
                     tableRefernceName=d.defineTableReferenceName(names.get(i));
-                   List<String> listOfTableNames= db.getTables().stream().map(x->x.getTableName()).collect(Collectors.toList());
+
                    if(!listOfTableNames.contains(equals(tableRefernceName)) || listOfTableNames.size()==0){
                        throw new TableReferenceNameNotExistException();
                    }else{
                        tableAttributes.add(new Attribute(names.get(i),types.get(i),true,true,tableRefernceName));
                    }
 
-                } else if(names.get(i).equals(primaryKey))
+                } else if(names.get(i).equals(primaryKey)){
+                    //if the attribuTe is a PK ONLY
                     tableAttributes.add(new Attribute(names.get(i),types.get(i),true,false));
-                else if(foreignKeys.contains(names.get(i))){
+                } else if(foreignKeys.contains(names.get(i))){
+                    //if the attribuTe is a fK ONLY
                     tableRefernceName=d.defineTableReferenceName(names.get(i));
                     System.out.println("table reference name is " +tableRefernceName);
-                    List<String> listOfTableNames= db.getTables().stream().map(x->x.getTableName()).collect(Collectors.toList());
-                    if(!listOfTableNames.contains(equals(tableRefernceName)) || listOfTableNames.size()==0){
+
+                    System.out.println("test table names list " +listOfTableNames);
+                    if(!listOfTableNames.contains(tableRefernceName) || listOfTableNames.size()==0){
+                        System.out.println(!listOfTableNames.contains(tableRefernceName));
+                        System.out.println(listOfTableNames.size()==0);
+                        System.out.println(tableRefernceName);
+                        System.out.println("list of table names is" +listOfTableNames);
                         throw new TableReferenceNameNotExistException();
                     }else{
                         tableAttributes.add(new Attribute(names.get(i),types.get(i),false,true,tableRefernceName));
@@ -75,63 +92,68 @@ public class TableService implements InterfaceTable {
 
 
             }
-            this.table.setTableAttributes(tableAttributes);
+                this.table.setTableAttributes(tableAttributes);
+
         }
-    public void insertRow(List<Object> values) throws ParseException, ClassCastException, IdValueDuplicationException, ParseException {
+    public List<Row> insertRow(List<Object> values, Table table) throws ParseException, ClassCastException, IdValueDuplicationException, ParseException {
         System.out.println("insert row invoked");
         Map<String,Object> temporarlyRowValues=new HashMap<>();
         Map<String,Object> rowValues=new HashMap();
         List<Object> keys=new ArrayList<>();
-        if(values.size()!=this.table.getTableAttributes().size()){
+        System.out.println("table attributes "+table.getTableAttributes());
+        if(values.size()!=table.getTableAttributes().size()){
             System.out.println("error throw exception values length not match");
         }else{
-            for(int i=0;i<this.table.getTableAttributes().size();i++){
-                if(this.table.getTableAttributes().get(i).getType().equals("INT")){
+            for(int i=0;i<table.getTableAttributes().size();i++){
+                if(table.getTableAttributes().get(i).getType().equals("INT")){
                     if(values.get(i) instanceof Integer){
-                        temporarlyRowValues.put(this.table.getTableAttributes().get(i).getName(),values.get(i));
+                        temporarlyRowValues.put(table.getTableAttributes().get(i).getName(),values.get(i));
                     }else{
 
                     }
-                }else if(this.table.getTableAttributes().get(i).getType().equals("DATE")){
+                }else if(table.getTableAttributes().get(i).getType().equals("DATE")){
                     SimpleDateFormat format=new SimpleDateFormat("MM-dd-yyyy");
                     Date d=format.parse((String) values.get(i));
-                    temporarlyRowValues.put(this.table.getTableAttributes().get(i).getName(),values.get(i));
+                    temporarlyRowValues.put(table.getTableAttributes().get(i).getName(),values.get(i));
 
                 }else{
                     String s= String.valueOf(values.get(i)) ;
-                    temporarlyRowValues.put(this.table.getTableAttributes().get(i).getName(),values.get(i));
+                    temporarlyRowValues.put(table.getTableAttributes().get(i).getName(),values.get(i));
 
                 }
             }
         }
-        keys=  this.table.getRows().stream().flatMap(x->x.getRow().entrySet().stream().filter(e->e.getKey().equals(primaryKeyName()))).map(key->key.getValue()).collect(Collectors.toList());
-
-        if(!(keys.contains((temporarlyRowValues.get(primaryKeyName()))))){
+        System.out.println(table.getRows());
+        keys=  table.getRows().stream().flatMap(x->x.getRow().entrySet().stream().filter(e->e.getKey().equals(primaryKeyName(table)))).map(key->key.getValue()).collect(Collectors.toList());
+        System.out.println("row values ="+temporarlyRowValues.get(primaryKeyName(table)));
+        System.out.println("keys are"+ keys);
+        System.out.println("key is "+primaryKeyName(table));
+        if(!(keys.contains((temporarlyRowValues.get(primaryKeyName(table)))))){
 
             rowValues=temporarlyRowValues;
-            List<Row> rows=this.table.getRows();
+            List<Row> rows=table.getRows();
             rows.add(new Row(rowValues));
-            this.table.setRows(rows);
+            table.setRows(rows);
             System.out.println("not duplicated id");
         }else{
             throw new IdValueDuplicationException("id value must be unique");
         }
 
 
-        keys=  this.table.getRows().stream().flatMap(x->x.getRow().entrySet().stream().filter(e->e.getKey().equals(primaryKeyName()))).map(key->key.getValue()).collect(Collectors.toList());
+        keys=  table.getRows().stream().flatMap(x->x.getRow().entrySet().stream().filter(e->e.getKey().equals(primaryKeyName(table)))).map(key->key.getValue()).collect(Collectors.toList());
         System.out.println("keys are " +keys);
-
+        return table.getRows();
     }
-    public String primaryKeyName(){
+    public String primaryKeyName(Table table){
         String name="";
-        for(int i=0;i< this.table.getTableAttributes().size();i++){
-            if(this.table.getTableAttributes().get(i).getPrimaryKey()){
-                name=this.table.getTableAttributes().get(i).getName();
+        for(int i=0;i< table.getTableAttributes().size();i++){
+            if(table.getTableAttributes().get(i).getPrimaryKey()){
+                name=table.getTableAttributes().get(i).getName();
             }
         }
         return name;
     }
-    public void SaveTabel() throws JSONException {
+    public void saveTabel(String tableName,Table table) throws JSONException {
         String foreignKeyReference;
         JSONObject tableDetails = new JSONObject();
         JSONArray jsonArray=new JSONArray();
@@ -145,7 +167,7 @@ public class TableService implements InterfaceTable {
         }
         System.out.println(tableDetails);
         try{
-            FileWriter filewriter=new FileWriter("C:\\Users\\asaoud\\Desktop\\javaworkspace\\file.json");
+            FileWriter filewriter=new FileWriter("C:\\Users\\asaoud\\Desktop\\javaworkspace\\"+tableName+".json");
             filewriter.write(tableDetails.toString());
             filewriter.flush();
             filewriter.close();
@@ -156,5 +178,6 @@ public class TableService implements InterfaceTable {
 
 
     }
+
 
 }

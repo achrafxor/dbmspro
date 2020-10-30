@@ -15,11 +15,13 @@ public class Main {
 
     public static void main(String[] args) throws IdValueDuplicationException, ParseException, ClassCastException, JSONException, TableReferenceNameNotExistException {
         List<Object> values=new ArrayList<>();
-        values.add(5);
-        values.add(8);
+        List<Object> values2=new ArrayList<>();
+        values.add(10);
         DbService db=new DbService();
+        System.out.println("new table 1");
         db.buildDataBaseTable("person");
-        db.buildDataBaseTable("location");
-        db.buildDataBaseTable("job");
+        db.showDataBase();
+        db.insertIntoTable("person",values);
+        db.showDataBase();
     }
 }
